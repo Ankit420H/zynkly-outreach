@@ -1,0 +1,258 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// Auth
+// =============================================================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+// =============================================================================
+// Contacts & Tags
+// =============================================================================
+
+model Contact {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  whatsapp     String?
+  college      String?
+  year         String?
+  branch       String?
+  department   String?
+  city         String?
+  state        String?
+  skills       String?
+  resumeUrl    String?
+  linkedinUrl  String?
+  source       String?
+  notes        String?
+  customFields Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tags       ContactTag[]
+  queueItems QueueItem[]
+
+  @@index([email])
+  @@index([name])
+  @@index([college])
+  @@index([createdAt])
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  contacts  ContactTag[]
+  campaigns CampaignTag[]
+
+  @@index([name])
+}
+
+model ContactTag {
+  contactId String
+  tagId     String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, tagId])
+  @@index([tagId])
+}
+
+// =============================================================================
+// Templates
+// =============================================================================
+
+model Template {
+  id        String   @id @default(cuid())
+  name      String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  versions  TemplateVersion[]
+  campaigns Campaign[]
+
+  @@index([name])
+}
+
+model TemplateVersion {
+  id         String   @id @default(cuid())
+  templateId String
+  content    String
+  version    Int
+  createdAt  DateTime @default(now())
+
+  template Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, version])
+  @@index([templateId])
+}
+
+// =============================================================================
+// Attachments
+// =============================================================================
+
+model Attachment {
+  id        String   @id @default(cuid())
+  filename  String
+  url       String
+  mimeType  String
+  size      Int
+  createdAt DateTime @default(now())
+
+  campaigns CampaignAttachment[]
+
+  @@index([filename])
+}
+
+model CampaignAttachment {
+  campaignId   String
+  attachmentId String
+  campaign     Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  attachment   Attachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, attachmentId])
+}
+
+// =============================================================================
+// SMTP Profiles
+// =============================================================================
+
+model SmtpProfile {
+  id                String   @id @default(cuid())
+  label             String
+  provider          String   // gmail, zoho, outlook, brevo, ses, custom
+  host              String
+  port              Int
+  username          String
+  encryptedPassword String
+  secure            Boolean  @default(true)
+  fromName          String
+  fromEmail         String
+  replyTo           String?
+  isVerified        Boolean  @default(false)
+  lastTestedAt      DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  campaigns Campaign[]
+
+  @@index([label])
+}
+
+// =============================================================================
+// Campaigns
+// =============================================================================
+
+enum CampaignStatus {
+  DRAFT
+  DRY_RUN
+  READY
+  QUEUED
+  SENDING
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+model Campaign {
+  id            String         @id @default(cuid())
+  name          String
+  status        CampaignStatus @default(DRAFT)
+  smtpProfileId String
+  templateId    String
+  delaySeconds  Int            @default(5)
+  scheduledAt   DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  totalEmails   Int            @default(0)
+  sentEmails    Int            @default(0)
+  failedEmails  Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  smtpProfile SmtpProfile          @relation(fields: [smtpProfileId], references: [id])
+  template    Template             @relation(fields: [templateId], references: [id])
+  attachments CampaignAttachment[]
+  queueItems  QueueItem[]
+  tags        CampaignTag[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model CampaignTag {
+  campaignId String
+  tagId      String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, tagId])
+  @@index([tagId])
+}
+
+// =============================================================================
+// Queue
+// =============================================================================
+
+enum QueueItemStatus {
+  PENDING
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+  RETRYING
+  CANCELLED
+}
+
+model QueueItem {
+  id         String          @id @default(cuid())
+  campaignId String
+  contactId  String
+  status     QueueItemStatus @default(PENDING)
+  attempts   Int             @default(0)
+  lastError  String?
+  sentAt     DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, contactId])
+  @@index([campaignId, status])
+  @@index([contactId])
+  @@index([status])
+}
+
+// =============================================================================
+// Blacklist
+// =============================================================================
+
+model BlacklistEntry {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}

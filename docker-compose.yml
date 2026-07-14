@@ -1,0 +1,131 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zynkly-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://zynkly:zynkly_pass@postgres:5432/zynkly
+      - REDIS_URL=redis://redis:6379
+      - AUTH_SECRET=${AUTH_SECRET}
+      - NEXTAUTH_URL=http://localhost:3000
+      - INGEST_EVENT_KEY=${INGEST_EVENT_KEY}
+      - INGEST_SIGNING_KEY=${INGEST_SIGNING_KEY}
+      - SMTP_ENCRYPTION_KEY=${SMTP_ENCRYPTION_KEY}
+      - BLOB_READ_WRITE_TOKEN=${BLOB_READ_WRITE_TOKEN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - zynkly-net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: zynkly-postgres
+    environment:
+      POSTGRES_USER: zynkly
+      POSTGRES_PASSWORD: zynkly_pass
+      POSTGRES_DB: zynkly
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zynkly"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - zynkly-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: zynkly-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - zynkly-net
+
+  # Optional: HashiCorp Vault for local secret management
+  vault:
+    image: hashicorp/vault:1.17
+    container_name: zynkly-vault
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_ROOT_TOKEN:-root}
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    volumes:
+      - vault-data:/vault/data
+    cap_add:
+      - IPC_LOCK
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8200/v1/sys/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - zynkly-net
+
+  # Optional: Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:v2.50
+    container_name: zynkly-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+    networks:
+      - zynkly-net
+
+  # Optional: Grafana for dashboards
+  grafana:
+    image: grafana/grafana:11.0
+    container_name: zynkly-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - grafana-data:/var/lib/grafana
+    restart: unless-stopped
+    networks:
+      - zynkly-net
+
+volumes:
+  postgres-data:
+  redis-data:
+  vault-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  zynkly-net:
+    driver: bridge
