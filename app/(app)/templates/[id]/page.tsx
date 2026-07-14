@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { injectBranding, substituteVariables } from "@/lib/templates/engine";
+import { substituteVariables } from "@/lib/templates/engine";
 import type { Contact } from "@prisma/client";
 
 interface TemplateData {
@@ -81,7 +81,7 @@ export default function TemplateEditorPage({ params }: { params: Promise<{ id: s
   }
 
   const renderedHtml = content
-    ? injectBranding(substituteVariables(content, SAMPLE_CONTACT))
+    ? substituteVariables(content, SAMPLE_CONTACT)
     : "";
 
   if (!template) return <div className="animate-pulse"><div className="h-8 bg-muted rounded w-48" /></div>;

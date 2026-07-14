@@ -2,7 +2,6 @@ import {
   substituteVariables,
   extractVariables,
   validateVariables,
-  injectBranding,
   renderEmail,
 } from "@/lib/templates/engine";
 import type { Contact } from "@prisma/client";
@@ -84,27 +83,12 @@ describe("Template Engine", () => {
     });
   });
 
-  describe("injectBranding", () => {
-    it("appends footer before </body>", () => {
-      const html = "<html><body><p>Content</p></body></html>";
-      const result = injectBranding(html);
-      expect(result).toContain("Zynkly");
-      expect(result.indexOf("</body>")).toBeGreaterThan(result.indexOf("Zynkly"));
-    });
-
-    it("appends footer even without </body>", () => {
-      const html = "<p>Content</p>";
-      const result = injectBranding(html);
-      expect(result).toContain("Zynkly");
-    });
-  });
-
   describe("renderEmail", () => {
-    it("substitutes variables and injects branding", () => {
+    it("substitutes variables", () => {
       const template = "<body><p>Hello {{name}}</p></body>";
       const result = renderEmail(template, mockContact);
       expect(result).toContain("Hello Ankit Kumar");
-      expect(result).toContain("Zynkly");
+      expect(result).not.toContain("Zynkly");
     });
   });
 });
