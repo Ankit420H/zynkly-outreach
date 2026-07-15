@@ -116,7 +116,7 @@ export default function ContactsPage() {
       toast.success("Contact created");
       fetchContacts();
     } else {
-      toast.error(res.error?.message || "Failed to create contact");
+      toast.error(res.error || "Failed to create contact");
       fetchContacts();
     }
   }
@@ -131,7 +131,7 @@ export default function ContactsPage() {
       setShowTagDialog(false);
       fetchTags();
     } else {
-      toast.error(res.error?.message || "Failed to create tag");
+      toast.error(res.error || "Failed to create tag");
     }
   }
 
