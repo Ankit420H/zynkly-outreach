@@ -80,7 +80,7 @@ export default function BlacklistPage() {
       fetchEntries();
     } else {
       const err = await res.json();
-      toast.error(err.error || "Failed to blacklist");
+      toast.error(err.error?.message || "Failed to blacklist");
     }
   }
 

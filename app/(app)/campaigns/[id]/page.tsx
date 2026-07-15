@@ -114,7 +114,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
       fetchCampaign();
     } else {
       const err = await res.json();
-      toast.error(err.error || "Failed");
+      toast.error(err.error?.message || "Failed");
     }
     setTransitioning(false);
   }

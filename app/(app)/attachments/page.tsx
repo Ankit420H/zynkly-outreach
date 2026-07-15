@@ -52,7 +52,7 @@ export default function AttachmentsPage() {
       let errorMessage = "Upload failed";
       try {
         const err = await res.json();
-        errorMessage = err.error || errorMessage;
+        errorMessage = err.error?.message || errorMessage;
       } catch {
         // If it's a 500 crash, it might not be JSON
       }

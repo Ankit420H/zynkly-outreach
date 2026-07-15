@@ -56,7 +56,7 @@ export default function CampaignsPage() {
       fetchCampaigns();
     } else {
       const err = await res.json();
-      toast.error(err.error || "Failed to update campaign");
+      toast.error(err.error?.message || "Failed to update campaign");
     }
   }
 

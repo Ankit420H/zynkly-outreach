@@ -130,7 +130,7 @@ export default function NewCampaignPage() {
           smtpProfileId: formData.smtpProfileId,
           templateId: formData.templateId,
           delaySeconds: formData.delaySeconds,
-          scheduledAt: formData.scheduledAt || null,
+          scheduledAt: formData.scheduledAt ? new Date(formData.scheduledAt).toISOString() : null,
           contactIds: formData.contactIds,
           tagIds: formData.tagIds,
           attachmentIds: formData.attachmentIds,
@@ -147,7 +147,7 @@ export default function NewCampaignPage() {
         }
       } else {
         const err = await res.json();
-        toast.error(err.error || "Validation failed");
+        toast.error(err.error?.message || "Validation failed");
       }
     } finally {
       setRunningDryRun(false);
@@ -164,7 +164,7 @@ export default function NewCampaignPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          scheduledAt: formData.scheduledAt || null,
+          scheduledAt: formData.scheduledAt ? new Date(formData.scheduledAt).toISOString() : null,
         }),
       });
 
